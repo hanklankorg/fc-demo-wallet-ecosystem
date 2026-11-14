@@ -4,6 +4,9 @@
 
 name: Pull Request Workflow
 
+# Forge CI owns the lint and security gate: the checks of nanolinter.toml,
+# which fail the pull request on a finding. The ecosystem's integration tests
+# run in the test job below.
 on:
   pull_request:
 
@@ -16,23 +19,59 @@ concurrency:
 
 jobs:
   pr-checks:
-    uses: diggsweden/reusable-ci/.github/workflows/pullrequest-orchestrator.yml@617cb32268cb6aefdfa4117b4159d37e3b47d7b3 # v2.8.3
+    uses: diggsweden/forge-ci/.github/workflows/pullrequest-orchestrator.yml@PIN_FORGE_CI_SHA # v0.90.0
+    permissions:
+      actions: read
+      contents: read
+    # The jobs run on the automatic GITHUB_TOKEN; CODE_SCANNING_TOKEN is
+    # optional and only enables the SARIF upload to Code Scanning.
+    secrets:
+      CODE_SCANNING_TOKEN: ${{ secrets.CODE_SCANNING_TOKEN }}
+    with:
+      # The full commit the uses: ref above names; every job of the route runs
+      # the CLI built in this run from exactly this commit.
+      forge-ci-binary-ref: PIN_FORGE_CI_SHA # v0.90.0
+      # No buildable artifacts - this is a docker-compose orchestration project
+      project-type: meta
+      lint-engine: nanolinter
+      # The lint image, pinned by digest: the plan job refuses a tag. The java
+      # flavour carries the Maven toolchain that lints the integration tests.
+      nanolinter-image: ghcr.io/itiquette/nanolinter:java@sha256:PIN_DIGEST
+      # Pinned by digest and admitted before any job runs; replace FIXME with
+      # the digests of the release you call (docs/runtime-images.md).
+      runtime-image: ghcr.io/diggsweden/forge-ci-runtime-base@sha256:0000000000000000000000000000000000000000000000000000000000000000 # FIXME v0.90.0 digest
+      canonical-builder-image: ghcr.io/diggsweden/forge-ci-runtime-go-1.27@sha256:0000000000000000000000000000000000000000000000000000000000000000 # FIXME v0.90.0 digest
+      # Lint findings fail the pull request, as the lint job did before.
+      # Dependency advisories are reported and do not fail it: the scan
+      # covers every dependency, not only the ones a pull request changes.
+      enforce-lint: true
+
+  # Prettier formats the XML files, as `just lint-node-format` does. It needs
+  # the project's own Prettier and XML plugin, which the lint gate does not
+  # install, so it has a job of its own.
+  format-xml:
+    name: Format XML
+    runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: read
-      security-events: write
-    # TODO: replace with explicit secrets once diggsweden/reusable-ci declares them in on.workflow_call.secrets
-    secrets: inherit
-    with:
-      reusable-ci-ref: v2.7.9
-      project-type: meta
-      # Use devbase-check linting (replaces megalint, commitlint, licenselint)
-      linters.devbasecheck: true
-      linters.megalint: false
-      linters.commitlint: false
-      linters.licenselint: false
-      linters.publiccodelint: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+
+      - name: Install dependencies
+        run: npm ci --include=dev
+
+      - name: Check formatting
+        run: npx prettier --check .
+
+  # The project's tests. The orchestrator never runs them; require this job,
+  # format-xml and pr-checks as status checks.
   test:
     needs: [pr-checks]
     if: always() # Run tests even if linting fails (get complete feedback)

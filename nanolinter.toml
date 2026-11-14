@@ -1,0 +1,69 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
+# The lint plan of the pull request gate: Forge CI runs `nanolinter verify`
+# against it. The checks are the ones `just lint-all` runs, with the SAST
+# and dependency scans the pull request gate ran before.
+# `nanolinter explain --all` lists more checks.
+#
+# `just lint-node-format` has no check here: it needs the project's own
+# Prettier and XML plugin, which the gate does not install. The format-xml
+# job of the pull request workflow runs it.
+
+[detect]
+auto = true
+
+[verify]
+checks = [
+  "version-control",
+  "commits",
+  "secrets",
+  "sast",
+  "osv",
+  "yaml",
+  "markdown",
+  "shell",
+  "shell-format",
+  "actions",
+  "license",
+  "xml",
+  "container",
+  "java-checkstyle",
+  "java-pmd",
+  "java-format",
+]
+
+[policy]
+block = [
+  "version-control",
+  "commits",
+  "secrets",
+  "sast",
+  "osv",
+  "yaml",
+  "markdown",
+  "shell",
+  "shell-format",
+  "actions",
+  "license",
+  "xml",
+  "container",
+  "java-checkstyle",
+  "java-pmd",
+  "java-format",
+]
+
+# ShellCheck as `just lint-shell` runs it: from severity info, without the
+# three rules it excludes.
+[linters.shell.settings]
+"shellcheck.severity" = "info"
+"shellcheck.exclude_rules" = ["SC1091", "SC2034", "SC2155"]
+
+# renovate.json sets no minimum release age for updates. That is a choice
+# about how Renovate proposes updates, not a defect in the code, so the rule
+# is left out here for the maintainers to decide.
+[linters.sast.settings]
+"opengrep.exclude_rules" = [
+  "package_managers.renovate.renovate-missing-minimum-release-age.renovate-missing-minimum-release-age",
+]

@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
+# Artifacts Configuration for Wallet Ecosystem
+#
+# This is a docker-compose orchestration project - no artifacts to build.
+# Release workflow is used for changelog generation and version tagging only.
+# Forge CI needs one entry to release, so the project is declared with the
+# 'meta' type, which builds, bumps and scans nothing.
+
+artifacts:
+  - name: wallet-ecosystem
+    project-type: meta
+    working-directory: .
+containers: []
+
+# The release files (checksums) and the release commit and tag are signed
+# with the organisation's GPG key in RELEASE_GPG_PRIVATE_KEY, as before.
+sign:
+  method: gpg
+git-signing:
+  method: gpg
