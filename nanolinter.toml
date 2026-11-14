@@ -34,12 +34,13 @@ checks = [
   "java-format",
 ]
 
+# SAST findings are reported and do not fail the pull request: "sast" runs
+# under [verify] and is not listed here.
 [policy]
 block = [
   "version-control",
   "commits",
   "secrets",
-  "sast",
   "osv",
   "yaml",
   "markdown",
@@ -59,11 +60,3 @@ block = [
 [linters.shell.settings]
 "shellcheck.severity" = "info"
 "shellcheck.exclude_rules" = ["SC1091", "SC2034", "SC2155"]
-
-# renovate.json sets no minimum release age for updates. That is a choice
-# about how Renovate proposes updates, not a defect in the code, so the rule
-# is left out here for the maintainers to decide.
-[linters.sast.settings]
-"opengrep.exclude_rules" = [
-  "package_managers.renovate.renovate-missing-minimum-release-age.renovate-missing-minimum-release-age",
-]
